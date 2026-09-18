@@ -55,6 +55,7 @@ function reset!(sim::Simulation)
     _warp[].synchronize_device(
         sim.device,
     )
+    
 
     return sim
 end
