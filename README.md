@@ -276,7 +276,3 @@ Pkg.test()
 This package interfaces with third-party software that is distributed under its own licenses. In particular, MuJoCo Warp is an external project maintained by Google DeepMind and NVIDIA and is distributed under the Apache-2.0 license. Users should review the licenses of MuJoCo Warp, MuJoCo, NVIDIA Warp, and other transitive dependencies separately.
 
 `MuJoCoWarpInterface.jl` is an independent Julia package and is not an official Google DeepMind, NVIDIA, MuJoCo, or JuliaLang project.
-
-## Development note
-
-Development of this package has included assistance from OpenAI ChatGPT for design discussion, documentation drafting, and code review. The maintainer is responsible for reviewing, testing, and understanding the code included in released versions.
