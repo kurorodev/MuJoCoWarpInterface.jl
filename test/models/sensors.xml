@@ -1,0 +1,19 @@
+<mujoco model="sensor_pendulum">
+    <option timestep="0.002" gravity="0 0 0"/>
+    <worldbody>
+        <body name="arm">
+            <joint name="hinge" type="hinge" axis="0 0 1"/>
+            <geom type="capsule" fromto="0 0 0 1 0 0" size="0.05" mass="1"/>
+            <site name="tip" pos="1 0 0" size="0.01"/>
+        </body>
+    </worldbody>
+    <actuator>
+        <motor name="motor" joint="hinge" gear="1"/>
+    </actuator>
+    <sensor>
+        <jointpos name="angle" joint="hinge"/>
+        <jointvel name="velocity" joint="hinge"/>
+        <framepos name="tip_position" objtype="site" objname="tip"/>
+        <gyro site="tip"/>
+    </sensor>
+</mujoco>

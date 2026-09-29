@@ -13,7 +13,8 @@ The package is aimed at reinforcement learning, robotics, and control workloads 
 
 - Batched MJWarp simulation from Julia with configurable `nworlds`
 - Zero-copy interoperability between MJWarp/Warp arrays and CUDA.jl
-- Julia access to `qpos`, `qvel`, and `ctrl` as `CuArray`s
+- Julia access to `qpos`, `qvel`, `ctrl`, and `sensordata` as `CuArray`s
+- Zero-copy sensor views by name or index, and sensor metadata
 - Batched `step!` and full `reset!`
 - Automatic Python environment management through CondaPkg.jl
 - Automatic installation of `mujoco-warp`
@@ -116,6 +117,39 @@ Reset all environments:
 reset!(sim)
 ```
 
+## Sensors
+
+Define sensors in the model's MJCF `<sensor>` section, for example:
+
+```xml
+<sensor>
+    <jointpos name="angle" joint="hinge"/>
+    <jointvel name="velocity" joint="hinge"/>
+</sensor>
+```
+
+Read all outputs or select a sensor across all worlds:
+
+```julia
+forward!(sim)                         # Compute readings without advancing time
+readings = sensordata(sim)            # (nsensordata(sim), nworlds(sim))
+angle = sensor(sim, "angle")          # (1, nworlds(sim)), shared GPU view
+first_sensor = sensor(sim, 1)         # One-based index in model order
+names = sensor_names(sim)            # Unnamed sensors appear as nothing
+```
+
+`nsensor(sim)` counts sensors; `nsensordata(sim)` counts their scalar outputs.
+Vector sensors return `(dimension, nworlds)` views. Models without sensors return
+an empty `(0, nworlds)` buffer. Cache sensor views outside hot loops; they remain
+valid across stepping and reset. Reading a buffer or view does not recompute it.
+
+`step!` exposes sensor readings computed during MJWarp's integration step; they
+need not correspond to the final integrated `qpos`/`qvel`. Call `forward!(sim)`
+when you need readings for the current state, after manually changing state or
+controls, or after construction/`reset!`. This follows the backend's
+[forward dynamics API](https://mujoco.readthedocs.io/en/3.13.0/mjwarp/api.html).
+Supported sensor types and options are determined by the installed MJWarp version.
+
 ## Zero-copy CUDA interoperability
 
 The main design goal of the package is to avoid a CPU round-trip between Julia and MJWarp.
@@ -138,6 +172,7 @@ The arrays returned by:
 qpos(sim)
 qvel(sim)
 ctrl(sim)
+sensordata(sim)
 ```
 
 are CUDA.jl arrays backed by the same GPU allocations used by MJWarp.
@@ -197,6 +232,12 @@ actions
 | `qpos(sim)`                                  | Generalized positions as a zero-copy Julia GPU array          |
 | `qvel(sim)`                                  | Generalized velocities as a zero-copy Julia GPU array         |
 | `ctrl(sim)`                                  | Actuator controls as a zero-copy Julia GPU array              |
+| `sensordata(sim)`                            | All sensor outputs as a zero-copy Julia GPU array             |
+| `sensor(sim, name_or_index)`                 | Zero-copy view of one sensor across all worlds                |
+| `sensor_names(sim)`                          | Sensor names in model order (`nothing` for unnamed sensors)   |
+| `nsensor(sim)`                               | Number of sensors                                            |
+| `nsensordata(sim)`                           | Number of scalar sensor outputs per world                    |
+| `forward!(sim)`                              | Recompute dynamics and sensors without advancing time        |
 | `step!(sim)`                                 | Advance all worlds by one MJWarp physics step                 |
 | `step!(sim, actions)`                        | Copy actions into `ctrl` and advance all worlds               |
 | `reset!(sim)`                                | Reset all worlds                                              |
@@ -235,7 +276,7 @@ GPU-specific tests run when `CUDA.functional()` is true.
 
 On CI machines without an NVIDIA GPU, the package installation and backend-loading tests still run while GPU simulation tests are skipped.
 
-The test suite includes checks for simulation construction, batched stepping, reset behavior, and pointer equality between MJWarp allocations and Julia CUDA arrays to guard the zero-copy contract.
+The test suite includes checks for simulation construction, batched stepping, reset behavior, and pointer equality between MJWarp allocations and Julia CUDA arrays to guard the zero-copy contract. Sensor lookup and indexing run without CUDA; GPU tests cover sensor values, shared views, and recomputation.
 
 ## Current limitations
 
@@ -248,13 +289,13 @@ The current implementation has the following limitations:
 - CPU physics execution is not currently exposed through `Simulation`.
 - Only full-environment reset is part of the current public API.
 - Rendering is not currently exposed.
-- Contact, sensor, and other MJWarp data arrays are not yet part of the public API.
+- Contact and other additional MJWarp data arrays are not yet part of the public API.
 - `step!` currently uses explicit synchronization between CUDA.jl and Warp for correctness; finer CUDA stream/event synchronization is planned.
 - The API should be considered experimental until `v1.0`.
 
 ## Roadmap
 
-Planned work includes masked/per-world reset, additional MJWarp state and sensor access, improved CUDA stream synchronization, richer model/device configuration, documentation with Documenter.jl, benchmarking on robotic models such as humanoids, and evaluation of additional backends for non-NVIDIA hardware.
+Planned work includes masked/per-world reset, additional MJWarp state access, improved CUDA stream synchronization, richer model/device configuration, documentation with Documenter.jl, benchmarking on robotic models such as humanoids, and evaluation of additional backends for non-NVIDIA hardware.
 
 ## Contributing
 

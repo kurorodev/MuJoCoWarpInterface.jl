@@ -1,3 +1,17 @@
+"""
+    forward!(sim)
+
+Recompute forward dynamics and sensor readings for the current state without
+advancing simulation time. Use after changing `qpos`, `qvel`, or `ctrl`, or after
+construction/reset when initial sensor readings are needed.
+"""
+function forward!(sim::Simulation)
+    CUDA.synchronize()
+    _mjwarp[].forward(sim.model, sim.data)
+    _warp[].synchronize_device(sim.device)
+    return sim
+end
+
 function step!(sim::Simulation)
     # Ensure writes performed by Julia/GPU backend are complete
     # before MJWarp reads the shared memory.

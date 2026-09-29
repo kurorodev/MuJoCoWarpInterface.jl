@@ -1,6 +1,6 @@
 name = "MuJoCoWarpInterface"
 uuid = "a2868a16-2106-452a-9d7a-deb84d0ae73b"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["kurorodev <danyakud13@gmail.com> and contributors"]
 
 [deps]

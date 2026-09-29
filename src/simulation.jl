@@ -1,4 +1,4 @@
-struct Simulation{Q,V,C}
+struct Simulation{Q,V,C,S}
     mj_model::Py
     model::Py
     data::Py
@@ -6,6 +6,7 @@ struct Simulation{Q,V,C}
     qpos::Q
     qvel::V
     ctrl::C
+    sensordata::S
 
     nworlds::Int
     device::String
@@ -83,6 +84,13 @@ function Simulation(
     qpos_array = DLPack.from_dlpack(data.qpos)
     qvel_array = DLPack.from_dlpack(data.qvel)
     ctrl_array = DLPack.from_dlpack(data.ctrl)
+    # Empty Warp buffers may have a null pointer, which CUDA cannot wrap.
+    # There are no sensor values to share in that case.
+    sensordata_array = if pyconvert(Int, mj_model.nsensordata) == 0
+        CUDA.CuArray{Float32}(undef, 0, Int(nworlds))
+    else
+        DLPack.from_dlpack(data.sensordata)
+    end
 
     return Simulation(
         mj_model,
@@ -91,6 +99,7 @@ function Simulation(
         qpos_array,
         qvel_array,
         ctrl_array,
+        sensordata_array,
         Int(nworlds),
         device_name,
     )
